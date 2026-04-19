@@ -19,10 +19,6 @@ struct SwiftTermView: NSViewRepresentable {
             if let sshCommand = note.object as? String {
                 view.send(txt: sshCommand)
                 view.send(txt: "\n")
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    startGPUPolling(on: view, terminal: terminal)
-                }
             }
         }
 
@@ -57,17 +53,4 @@ struct SwiftTermView: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: LocalProcessTerminalView, context: Context) {}
-
-    private func startGPUPolling(on view: LocalProcessTerminalView, terminal: TerminalService) {
-        Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { timer in
-            if !terminal.isConnected {
-                timer.invalidate()
-                return
-            }
-
-            let command = #"nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits"#
-            view.send(txt: command)
-            view.send(txt: "\n")
-        }
-    }
 }
