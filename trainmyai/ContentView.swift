@@ -44,13 +44,14 @@ struct ContentView: View {
 
             Divider()
 
-            HStack(spacing: 20) {
+            HStack(spacing: 18) {
                 Label("GPU \(terminal.gpuUsage)", systemImage: "gauge.with.needle")
                 Label("VRAM \(terminal.gpuMemory)", systemImage: "memorychip")
                 Label("Temp \(terminal.gpuTemp)", systemImage: "thermometer")
-                Label("Power \(terminal.gpuPower)", systemImage: "bolt")
+                Label("Power \(terminal.gpuPower)", systemImage: "bolt.fill")
                 Spacer()
             }
+            .font(.system(size: 13, weight: .medium))
             .padding(.horizontal)
             .padding(.vertical, 10)
 
