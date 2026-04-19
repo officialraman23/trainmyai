@@ -27,6 +27,17 @@ struct ContentView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         terminal.markConnected()
                     }
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                        NotificationCenter.default.post(
+                            name: .trainMyAIRunCommand,
+                            object: """
+                            mkdir -p /tmp/trainmyai && \
+                            nohup bash -c 'while true; do nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits > /tmp/trainmyai/gpu_stats.txt; sleep 3; done' >/tmp/trainmyai/gpu_watcher.log 2>&1 &
+                            """
+                        )
+                        terminal.startRemoteStatsPolling()
+                    }
                 }
 
                 Button("Disconnect") {
@@ -54,18 +65,6 @@ struct ContentView: View {
             .font(.system(size: 13, weight: .medium))
             .padding(.horizontal)
             .padding(.vertical, 10)
-
-            if !terminal.debugStatsOutput.isEmpty {
-                Divider()
-
-                Text(terminal.debugStatsOutput)
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.orange)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal)
-                    .padding(.vertical, 6)
-                    .lineLimit(3)
-            }
 
             Divider()
 

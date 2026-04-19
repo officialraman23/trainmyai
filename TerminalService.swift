@@ -12,7 +12,6 @@ final class TerminalService: ObservableObject {
     @Published var gpuMemory: String = "-- / --"
     @Published var gpuTemp: String = "--°C"
     @Published var gpuPower: String = "--W"
-    @Published var debugStatsOutput: String = ""
 
     private var statsTimer: Timer?
 
@@ -24,14 +23,33 @@ final class TerminalService: ObservableObject {
         isConnected = true
         isRunning = true
         connectionStatus = "Connected"
-        startStatsPolling()
     }
 
     func disconnectSSH() {
         isConnected = false
         connectionStatus = "Disconnected"
-        stopStatsPolling()
+        stopRemoteStatsPolling()
         resetStats()
+    }
+
+    func startRemoteStatsPolling() {
+        stopRemoteStatsPolling()
+
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task {
+                await self.fetchRemoteStatsFile()
+            }
+        }
+
+        Task {
+            await fetchRemoteStatsFile()
+        }
+    }
+
+    private func stopRemoteStatsPolling() {
+        statsTimer?.invalidate()
+        statsTimer = nil
     }
 
     private func resetStats() {
@@ -39,45 +57,23 @@ final class TerminalService: ObservableObject {
         gpuMemory = "-- / --"
         gpuTemp = "--°C"
         gpuPower = "--W"
-        debugStatsOutput = ""
     }
 
-    private func startStatsPolling() {
-        stopStatsPolling()
-
-        statsTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { await self.fetchGPUStats() }
-        }
-
-        Task { await fetchGPUStats() }
-    }
-
-    private func stopStatsPolling() {
-        statsTimer?.invalidate()
-        statsTimer = nil
-    }
-
-    private func fetchGPUStats() async {
+    private func fetchRemoteStatsFile() async {
         guard isConnected else { return }
 
-        guard let sshParts = parseSSHCommand(savedSSHCommand) else {
-            debugStatsOutput = "Could not parse SSH command"
-            return
-        }
+        guard let sshParts = parseSSHCommand(savedSSHCommand) else { return }
 
-        let remoteCommand = "nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits"
-
+        let remoteCommand = "cat /tmp/trainmyai/gpu_stats.txt 2>/dev/null"
         let command = """
         ssh -T -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i \(shellEscape(sshParts.keyPath)) \(shellEscape(sshParts.target)) \(shellEscape(remoteCommand))
         """
 
         do {
             let output = try await runShellCommand(command)
-            debugStatsOutput = output
             parseGPUStats(output)
         } catch {
-            debugStatsOutput = "ERROR: \(error.localizedDescription)"
+            // silent for now
         }
     }
 
