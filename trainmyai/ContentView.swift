@@ -55,13 +55,13 @@ struct ContentView: View {
             Divider()
 
             HStack(spacing: 18) {
-                Label("GPU \(terminal.gpuUsage)", systemImage: "gauge.with.needle")
-                Label("VRAM \(terminal.gpuMemory)", systemImage: "memorychip")
-                Label("Temp \(terminal.gpuTemp)", systemImage: "thermometer")
-                Label("Power \(terminal.gpuPower)", systemImage: "bolt.fill")
+                MetricCard(title: "Loss", value: "--")
+                MetricCard(title: "Grad Norm", value: "--")
+                MetricCard(title: "LR", value: "--")
+                MetricCard(title: "Epoch", value: "--")
+                MetricCard(title: "Progress", value: "--")
                 Spacer()
             }
-            .font(.system(size: 13, weight: .medium))
             .padding(.horizontal)
             .padding(.vertical, 10)
 
@@ -105,6 +105,26 @@ struct ContentView: View {
                 .padding()
             }
         }
+    }
+}
+
+struct MetricCard: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.headline)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
