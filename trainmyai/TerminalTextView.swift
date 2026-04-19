@@ -14,7 +14,7 @@ struct TerminalTextView: NSViewRepresentable {
         scrollView.hasHorizontalScroller = false
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = true
-        scrollView.backgroundColor = NSColor.black
+        scrollView.backgroundColor = .black
 
         let textView = TerminalNSTextView()
         textView.coordinator = context.coordinator
@@ -36,6 +36,7 @@ struct TerminalTextView: NSViewRepresentable {
 
         scrollView.documentView = textView
         context.coordinator.textView = textView
+        context.coordinator.lastRenderedText = terminal.output
 
         return scrollView
     }
@@ -43,15 +44,36 @@ struct TerminalTextView: NSViewRepresentable {
     func updateNSView(_ nsView: NSScrollView, context: Context) {
         guard let textView = context.coordinator.textView else { return }
 
-        if textView.string != terminal.output {
-            textView.string = terminal.output
+        let newText = terminal.output
+        let oldText = context.coordinator.lastRenderedText
+
+        guard newText != oldText else { return }
+
+        if newText.hasPrefix(oldText) {
+            let appended = String(newText.dropFirst(oldText.count))
+            if !appended.isEmpty {
+                let attr = NSAttributedString(
+                    string: appended,
+                    attributes: [
+                        .foregroundColor: NSColor.systemGreen,
+                        .font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
+                    ]
+                )
+                textView.textStorage?.append(attr)
+                textView.scrollToEndOfDocument(nil)
+            }
+        } else {
+            textView.string = newText
             textView.scrollToEndOfDocument(nil)
         }
+
+        context.coordinator.lastRenderedText = newText
     }
 
     final class Coordinator: NSObject {
         let terminal: TerminalService
         weak var textView: TerminalNSTextView?
+        var lastRenderedText: String = ""
 
         init(terminal: TerminalService) {
             self.terminal = terminal
@@ -72,7 +94,7 @@ final class TerminalNSTextView: NSTextView {
             return
         }
 
-        if let chars = event.characters {
+        if let chars = event.charactersIgnoringModifiers, !chars.isEmpty {
             coordinator.handleUserInput(chars)
         } else {
             super.keyDown(with: event)
