@@ -39,6 +39,9 @@ struct SwiftTermView: NSViewRepresentable {
                !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 view.send(txt: command)
                 view.send(txt: "\n")
+
+                // temporary parser hook for testing metrics
+                terminal.consumeTrainingOutput(command)
             }
         }
 

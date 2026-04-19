@@ -17,6 +17,7 @@ final class TrainingMetricsService: ObservableObject {
         parseLearningRate(from: text)
         parseEpoch(from: text)
         parseStep(from: text)
+        parseProgress(from: text)
         updateStatus()
     }
 
@@ -35,7 +36,7 @@ final class TrainingMetricsService: ObservableObject {
     private func parseLearningRate(from text: String) {
         if let value = firstMatch(in: text, pattern: #"learning[_ ]?rate[:= ]+([0-9eE\.\-]+)"#) {
             learningRate = value
-        } else if let value = firstMatch(in: text, pattern: #"lr[:= ]+([0-9eE\.\-]+)"#) {
+        } else if let value = firstMatch(in: text, pattern: #"\blr[:= ]+([0-9eE\.\-]+)"#) {
             learningRate = value
         }
     }
@@ -52,6 +53,17 @@ final class TrainingMetricsService: ObservableObject {
         }
     }
 
+    private func parseProgress(from text: String) {
+        if let current = firstMatch(in: text, pattern: #"\b([0-9]+)\s*/\s*([0-9]+)\b"#, capture: 1),
+           let total = firstMatch(in: text, pattern: #"\b([0-9]+)\s*/\s*([0-9]+)\b"#, capture: 2),
+           let currentInt = Double(current),
+           let totalInt = Double(total),
+           totalInt > 0 {
+            let percent = (currentInt / totalInt) * 100
+            progress = String(format: "%.1f%%", percent)
+        }
+    }
+
     private func updateStatus() {
         guard loss != "--" else {
             status = "Idle"
@@ -63,18 +75,22 @@ final class TrainingMetricsService: ObservableObject {
             return
         }
 
-        status = "Stable"
+        if let l = Double(loss), l.isFinite {
+            status = "Stable"
+        } else {
+            status = "Idle"
+        }
     }
 
-    private func firstMatch(in text: String, pattern: String) -> String? {
+    private func firstMatch(in text: String, pattern: String, capture: Int = 1) -> String? {
         guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
             return nil
         }
 
         let range = NSRange(text.startIndex..., in: text)
         guard let match = regex.firstMatch(in: text, options: [], range: range),
-              match.numberOfRanges > 1,
-              let valueRange = Range(match.range(at: 1), in: text) else {
+              match.numberOfRanges > capture,
+              let valueRange = Range(match.range(at: capture), in: text) else {
             return nil
         }
 
