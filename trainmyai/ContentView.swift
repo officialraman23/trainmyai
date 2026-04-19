@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var terminal = TerminalService()
-    @AppStorage("saved_ssh_command") private var savedSSHCommand: String = ""
     @State private var aiInput: String = ""
 
     var body: some View {
@@ -14,15 +13,29 @@ struct ContentView: View {
 
                 Text(terminal.connectionStatus)
 
-                TextField("SSH Command...", text: $savedSSHCommand)
+                TextField("SSH Command...", text: $terminal.savedSSHCommand)
                     .textFieldStyle(.roundedBorder)
 
                 Button("Connect") {
                     terminal.connectSSH()
+
+                    NotificationCenter.default.post(
+                        name: .trainMyAIConnectSSH,
+                        object: terminal.savedSSHCommand
+                    )
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        terminal.markConnected()
+                    }
                 }
 
                 Button("Disconnect") {
                     terminal.disconnectSSH()
+
+                    NotificationCenter.default.post(
+                        name: .trainMyAIDisconnectSSH,
+                        object: nil
+                    )
                 }
 
                 Spacer()
@@ -54,6 +67,12 @@ struct ContentView: View {
                         .textFieldStyle(.roundedBorder)
 
                     Button("Run AI Command") {
+                        if !aiInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            NotificationCenter.default.post(
+                                name: .trainMyAIRunCommand,
+                                object: aiInput
+                            )
+                        }
                         aiInput = ""
                     }
 
@@ -64,4 +83,10 @@ struct ContentView: View {
             }
         }
     }
+}
+
+extension Notification.Name {
+    static let trainMyAIConnectSSH = Notification.Name("trainMyAIConnectSSH")
+    static let trainMyAIDisconnectSSH = Notification.Name("trainMyAIDisconnectSSH")
+    static let trainMyAIRunCommand = Notification.Name("trainMyAIRunCommand")
 }
