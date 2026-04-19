@@ -35,15 +35,17 @@ final class TerminalService: ObservableObject {
                 let cleaned = self?.cleanTerminalText(text) ?? text
                 self?.output += cleaned
 
-                if cleaned.contains("root@"), cleaned.contains(":/") || cleaned.contains(":#") {
+                if cleaned.contains("root@") && (cleaned.contains(":/") || cleaned.contains(":#")) {
                     self?.isConnected = true
                     self?.connectionStatus = "Connected"
                 }
 
-                if cleaned.lowercased().contains("connection closed")
-                    || cleaned.lowercased().contains("could not resolve hostname")
-                    || cleaned.lowercased().contains("permission denied")
-                    || cleaned.lowercased().contains("connection refused") {
+                let lower = cleaned.lowercased()
+                if lower.contains("connection closed")
+                    || lower.contains("could not resolve hostname")
+                    || lower.contains("permission denied")
+                    || lower.contains("connection refused")
+                    || lower.contains("broken pipe") {
                     self?.isConnected = false
                     self?.connectionStatus = "Disconnected"
                 }
@@ -62,13 +64,16 @@ final class TerminalService: ObservableObject {
     }
 
     func send(_ command: String) {
+        sendRaw(command + "\n")
+    }
+
+    func sendRaw(_ raw: String) {
         guard let inputPipe else {
             output += "\n[ERROR] Shell is not running.\n"
             return
         }
 
-        let fullCommand = command + "\n"
-        if let data = fullCommand.data(using: .utf8) {
+        if let data = raw.data(using: .utf8) {
             inputPipe.fileHandleForWriting.write(data)
         }
     }
@@ -100,9 +105,8 @@ final class TerminalService: ObservableObject {
         var cleaned = text
 
         let patterns = [
-            #"\u{001B}\[[0-9;?]*[A-Za-z]"#,   // ANSI escape codes
-            #"\u{001B}\].*?\u{0007}"#,        // OSC title sequences
-            #"\r"#                            // carriage returns
+            #"\u{001B}\].*?\u{0007}"#,
+            #"\r"#
         ]
 
         for pattern in patterns {

@@ -5,13 +5,10 @@ struct ContentView: View {
     @StateObject private var terminal = TerminalService()
     @AppStorage("saved_ssh_command") private var savedSSHCommand: String = ""
 
-    @State private var command: String = ""
     @State private var aiInput: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
-
-            // TOP BAR
             HStack {
                 Circle()
                     .fill(terminal.isConnected ? .green : .red)
@@ -40,8 +37,6 @@ struct ContentView: View {
             Divider()
 
             HStack(spacing: 0) {
-
-                // LEFT PANEL (future model chat)
                 VStack {
                     Text("Model Test")
                         .font(.headline)
@@ -51,42 +46,19 @@ struct ContentView: View {
 
                 Divider()
 
-                // CENTER TERMINAL
                 VStack {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            Text(terminal.output)
-                                .font(.system(.body, design: .monospaced))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-                                .id("BOTTOM")
-                        }
-                        .background(Color.black)
-                        .foregroundColor(.green)
-                        .onChange(of: terminal.output) { _, _ in
-                            proxy.scrollTo("BOTTOM", anchor: .bottom)
-                        }
-                    }
-
-                    HStack {
-                        TextField("Enter command...", text: $command)
-                            .onSubmit { runCommand() }
-
-                        Button("Run") {
-                            runCommand()
-                        }
-                    }
-                    .padding()
+                    TerminalTextView(terminal: terminal)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
                 Divider()
 
-                // RIGHT PANEL (AI TRAINER)
                 VStack {
                     Text("AI Trainer")
                         .font(.headline)
 
                     TextField("Tell AI what to do...", text: $aiInput)
+                        .textFieldStyle(.roundedBorder)
 
                     Button("Run AI Command") {
                         runAI()
@@ -103,23 +75,15 @@ struct ContentView: View {
         }
     }
 
-    private func runCommand() {
-        guard !command.isEmpty else { return }
-        terminal.send(command)
-        command = ""
-    }
-
     private func runAI() {
         let prompt = aiInput.lowercased()
 
         if prompt.contains("train") && prompt.contains("polish") {
             terminal.send("cd /workspace")
             terminal.send("python train_polish_200k.py")
-        }
-        else if prompt.contains("gpu") {
+        } else if prompt.contains("gpu") {
             terminal.send("nvidia-smi")
-        }
-        else {
+        } else {
             terminal.send("echo 'AI did not understand command'")
         }
 
