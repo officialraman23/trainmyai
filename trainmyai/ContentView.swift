@@ -55,6 +55,18 @@ struct ContentView: View {
             .padding(.horizontal)
             .padding(.vertical, 10)
 
+            if !terminal.debugStatsOutput.isEmpty {
+                Divider()
+
+                Text(terminal.debugStatsOutput)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.orange)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.vertical, 6)
+                    .lineLimit(3)
+            }
+
             Divider()
 
             HStack(spacing: 0) {

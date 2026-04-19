@@ -12,6 +12,7 @@ final class TerminalService: ObservableObject {
     @Published var gpuMemory: String = "-- / --"
     @Published var gpuTemp: String = "--°C"
     @Published var gpuPower: String = "--W"
+    @Published var debugStatsOutput: String = ""
 
     private var statsTimer: Timer?
 
@@ -38,21 +39,18 @@ final class TerminalService: ObservableObject {
         gpuMemory = "-- / --"
         gpuTemp = "--°C"
         gpuPower = "--W"
+        debugStatsOutput = ""
     }
 
     private func startStatsPolling() {
         stopStatsPolling()
 
-        statsTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { [weak self] _ in
             guard let self else { return }
-            Task {
-                await self.fetchGPUStats()
-            }
+            Task { await self.fetchGPUStats() }
         }
 
-        Task {
-            await fetchGPUStats()
-        }
+        Task { await fetchGPUStats() }
     }
 
     private func stopStatsPolling() {
@@ -63,35 +61,58 @@ final class TerminalService: ObservableObject {
     private func fetchGPUStats() async {
         guard isConnected else { return }
 
-        let remoteCommand = "nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits"
-        let fullCommand = buildHiddenSSHCommand(remoteCommand: remoteCommand)
+        guard let sshParts = parseSSHCommand(savedSSHCommand) else {
+            debugStatsOutput = "Could not parse SSH command"
+            return
+        }
 
-        guard !fullCommand.isEmpty else { return }
+        let remoteCommand = "nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits"
+
+        let command = """
+        ssh -T -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i \(shellEscape(sshParts.keyPath)) \(shellEscape(sshParts.target)) \(shellEscape(remoteCommand))
+        """
 
         do {
-            let output = try await runShellCommand(fullCommand)
+            let output = try await runShellCommand(command)
+            debugStatsOutput = output
             parseGPUStats(output)
         } catch {
-            // silent for now
+            debugStatsOutput = "ERROR: \(error.localizedDescription)"
         }
     }
 
-    private func buildHiddenSSHCommand(remoteCommand: String) -> String {
-        let trimmed = savedSSHCommand.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed.hasPrefix("ssh ") else { return "" }
+    private func parseSSHCommand(_ command: String) -> (target: String, keyPath: String)? {
+        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = trimmed.split(separator: " ").map(String.init)
 
-        var command = trimmed
+        guard parts.count >= 4, parts[0] == "ssh" else { return nil }
 
-        command = command.replacingOccurrences(
-            of: "~/.ssh/id_ed25519",
-            with: "/Users/user/.ssh/id_ed25519"
-        )
+        var target: String?
+        var keyPath: String?
 
-        let sshBody = String(command.dropFirst(4))
+        var i = 1
+        while i < parts.count {
+            let part = parts[i]
 
-        return """
-        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \(sshBody) "\(remoteCommand)"
-        """
+            if part == "-i", i + 1 < parts.count {
+                var rawPath = parts[i + 1]
+                if rawPath.hasPrefix("~/") {
+                    rawPath = "/Users/user/" + rawPath.dropFirst(2)
+                }
+                keyPath = rawPath
+                i += 2
+                continue
+            }
+
+            if !part.hasPrefix("-") && target == nil {
+                target = part
+            }
+
+            i += 1
+        }
+
+        guard let target, let keyPath else { return nil }
+        return (target, keyPath)
     }
 
     private func runShellCommand(_ command: String) async throws -> String {
@@ -136,5 +157,12 @@ final class TerminalService: ObservableObject {
         gpuMemory = "\(parts[1]) / \(parts[2]) MB"
         gpuTemp = "\(parts[3])°C"
         gpuPower = "\(parts[4])W"
+    }
+
+    private func shellEscape(_ value: String) -> String {
+        if value.range(of: #"^[A-Za-z0-9_@%+=:,./-]+$"#, options: .regularExpression) != nil {
+            return value
+        }
+        return "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }
