@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		CEE175C42F93550100CD70C4 /* TerminalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEE175C32F9354FF00CD70C4 /* TerminalService.swift */; };
+		CEE175CB2F94560800CD70C4 /* SwiftTerm in Frameworks */ = {isa = PBXBuildFile; productRef = CEE175CA2F94560800CD70C4 /* SwiftTerm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CEE175CB2F94560800CD70C4 /* SwiftTerm in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +73,7 @@
 			);
 			name = trainmyai;
 			packageProductDependencies = (
+				CEE175CA2F94560800CD70C4 /* SwiftTerm */,
 			);
 			productName = trainmyai;
 			productReference = CEE175B52F93547800CD70C4 /* trainmyai.app */;
@@ -100,6 +103,9 @@
 			);
 			mainGroup = CEE175AC2F93547800CD70C4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				CEE175C92F94560800CD70C4 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CEE175B62F93547800CD70C4 /* Products */;
 			projectDirPath = "";
@@ -355,6 +361,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		CEE175C92F94560800CD70C4 /* XCRemoteSwiftPackageReference "SwiftTerm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/migueldeicaza/SwiftTerm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		CEE175CA2F94560800CD70C4 /* SwiftTerm */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = CEE175C92F94560800CD70C4 /* XCRemoteSwiftPackageReference "SwiftTerm" */;
+			productName = SwiftTerm;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CEE175AD2F93547800CD70C4 /* Project object */;
 }

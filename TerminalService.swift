@@ -3,7 +3,6 @@ import Combine
 
 @MainActor
 final class TerminalService: ObservableObject {
-    @Published var output: String = ""
     @Published var isRunning: Bool = false
     @Published var isConnected: Bool = false
     @Published var connectionStatus: String = "Disconnected"
@@ -11,6 +10,8 @@ final class TerminalService: ObservableObject {
     private var process: Process?
     private var inputPipe: Pipe?
     private var outputPipe: Pipe?
+
+    var onOutput: ((String) -> Void)?
 
     func startShell() {
         guard process == nil else { return }
@@ -32,23 +33,7 @@ final class TerminalService: ObservableObject {
                   let text = String(data: data, encoding: .utf8) else { return }
 
             Task { @MainActor in
-                let cleaned = self?.cleanTerminalText(text) ?? text
-                self?.output += cleaned
-
-                if cleaned.contains("root@") && (cleaned.contains(":/") || cleaned.contains(":#")) {
-                    self?.isConnected = true
-                    self?.connectionStatus = "Connected"
-                }
-
-                let lower = cleaned.lowercased()
-                if lower.contains("connection closed")
-                    || lower.contains("could not resolve hostname")
-                    || lower.contains("permission denied")
-                    || lower.contains("connection refused")
-                    || lower.contains("broken pipe") {
-                    self?.isConnected = false
-                    self?.connectionStatus = "Disconnected"
-                }
+                self?.handleIncomingText(text)
             }
         }
 
@@ -59,7 +44,7 @@ final class TerminalService: ObservableObject {
             self.outputPipe = outputPipe
             self.isRunning = true
         } catch {
-            self.output += "\n[ERROR] Failed to start shell: \(error.localizedDescription)\n"
+            onOutput?("\r\n[ERROR] Failed to start shell: \(error.localizedDescription)\r\n")
         }
     }
 
@@ -68,11 +53,7 @@ final class TerminalService: ObservableObject {
     }
 
     func sendRaw(_ raw: String) {
-        guard let inputPipe else {
-            output += "\n[ERROR] Shell is not running.\n"
-            return
-        }
-
+        guard let inputPipe else { return }
         if let data = raw.data(using: .utf8) {
             inputPipe.fileHandleForWriting.write(data)
         }
@@ -101,23 +82,23 @@ final class TerminalService: ObservableObject {
         connectionStatus = "Disconnected"
     }
 
-    private func cleanTerminalText(_ text: String) -> String {
-        var cleaned = text
-
-        let patterns = [
-            #"\u{001B}\].*?\u{0007}"#,
-            #"\r"#
-        ]
-
-        for pattern in patterns {
-            cleaned = cleaned.replacingOccurrences(
-                of: pattern,
-                with: "",
-                options: .regularExpression
-            )
+    private func handleIncomingText(_ text: String) {
+        if text.contains("root@") && (text.contains(":/") || text.contains(":#")) {
+            isConnected = true
+            connectionStatus = "Connected"
         }
 
-        return cleaned
+        let lower = text.lowercased()
+        if lower.contains("connection closed")
+            || lower.contains("could not resolve hostname")
+            || lower.contains("permission denied")
+            || lower.contains("connection refused")
+            || lower.contains("broken pipe") {
+            isConnected = false
+            connectionStatus = "Disconnected"
+        }
+
+        onOutput?(text)
     }
 
     deinit {
