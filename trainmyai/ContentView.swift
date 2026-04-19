@@ -44,6 +44,18 @@ struct ContentView: View {
 
             Divider()
 
+            HStack(spacing: 20) {
+                Label("GPU \(terminal.gpuUsage)", systemImage: "gauge.with.needle")
+                Label("VRAM \(terminal.gpuMemory)", systemImage: "memorychip")
+                Label("Temp \(terminal.gpuTemp)", systemImage: "thermometer")
+                Label("Power \(terminal.gpuPower)", systemImage: "bolt")
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+
+            Divider()
+
             HStack(spacing: 0) {
                 VStack {
                     Text("Model Test")

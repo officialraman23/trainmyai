@@ -8,6 +8,11 @@ final class TerminalService: ObservableObject {
     @Published var connectionStatus: String = "Disconnected"
     @Published var savedSSHCommand: String = "ssh oxc74ubncdafyt-64411a83@ssh.runpod.io -i ~/.ssh/id_ed25519"
 
+    @Published var gpuUsage: String = "--"
+    @Published var gpuMemory: String = "-- / --"
+    @Published var gpuTemp: String = "--°C"
+    @Published var gpuPower: String = "--W"
+
     func connectSSH() {
         connectionStatus = "Connecting..."
     }
@@ -21,5 +26,16 @@ final class TerminalService: ObservableObject {
     func disconnectSSH() {
         isConnected = false
         connectionStatus = "Disconnected"
+        gpuUsage = "--"
+        gpuMemory = "-- / --"
+        gpuTemp = "--°C"
+        gpuPower = "--W"
+    }
+
+    func updateGPUStats(util: String, usedMem: String, totalMem: String, temp: String, power: String) {
+        gpuUsage = util + "%"
+        gpuMemory = "\(usedMem) / \(totalMem) MB"
+        gpuTemp = temp + "°C"
+        gpuPower = power + "W"
     }
 }
