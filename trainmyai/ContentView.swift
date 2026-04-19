@@ -1,10 +1,8 @@
 import SwiftUI
-import Combine
 
 struct ContentView: View {
     @StateObject private var terminal = TerminalService()
     @AppStorage("saved_ssh_command") private var savedSSHCommand: String = ""
-
     @State private var aiInput: String = ""
 
     var body: some View {
@@ -20,10 +18,7 @@ struct ContentView: View {
                     .textFieldStyle(.roundedBorder)
 
                 Button("Connect") {
-                    if !terminal.isRunning {
-                        terminal.startShell()
-                    }
-                    terminal.connectSSH(savedSSHCommand)
+                    terminal.connectSSH()
                 }
 
                 Button("Disconnect") {
@@ -59,7 +54,7 @@ struct ContentView: View {
                         .textFieldStyle(.roundedBorder)
 
                     Button("Run AI Command") {
-                        runAI()
+                        aiInput = ""
                     }
 
                     Spacer()
@@ -68,23 +63,5 @@ struct ContentView: View {
                 .padding()
             }
         }
-        .onAppear {
-            terminal.startShell()
-        }
-    }
-
-    private func runAI() {
-        let prompt = aiInput.lowercased()
-
-        if prompt.contains("train") && prompt.contains("polish") {
-            terminal.send("cd /workspace")
-            terminal.send("python train_polish_200k.py")
-        } else if prompt.contains("gpu") {
-            terminal.send("nvidia-smi")
-        } else {
-            terminal.send("echo 'AI did not understand command'")
-        }
-
-        aiInput = ""
     }
 }
