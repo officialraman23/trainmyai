@@ -27,16 +27,6 @@ struct ContentView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         terminal.markConnected()
                     }
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                        NotificationCenter.default.post(
-                            name: .trainMyAIRunCommand,
-                            object: """
-                            mkdir -p /tmp/trainmyai && \
-                            nohup bash -c 'while true; do nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits > /tmp/trainmyai/gpu_stats.txt; sleep 3; done' >/tmp/trainmyai/gpu_watcher.log 2>&1 &
-                            """
-                        )
-                    }
                 }
 
                 Button("Disconnect") {
@@ -55,11 +45,13 @@ struct ContentView: View {
             Divider()
 
             HStack(spacing: 18) {
-                MetricCard(title: "Loss", value: "--")
-                MetricCard(title: "Grad Norm", value: "--")
-                MetricCard(title: "LR", value: "--")
-                MetricCard(title: "Epoch", value: "--")
-                MetricCard(title: "Progress", value: "--")
+                MetricCard(title: "Loss", value: terminal.loss)
+                MetricCard(title: "Grad Norm", value: terminal.gradNorm)
+                MetricCard(title: "LR", value: terminal.learningRate)
+                MetricCard(title: "Epoch", value: terminal.epoch)
+                MetricCard(title: "Step", value: terminal.step)
+                MetricCard(title: "Progress", value: terminal.progress)
+                MetricCard(title: "Status", value: terminal.trainingStatus)
                 Spacer()
             }
             .padding(.horizontal)
