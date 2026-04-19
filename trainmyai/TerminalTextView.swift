@@ -5,20 +5,19 @@ struct TerminalTextView: NSViewRepresentable {
     @ObservedObject var terminal: TerminalService
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(terminal: terminal)
+        Coordinator()
     }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scrollView = NSScrollView()
         scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
+        scrollView.hasHorizontalScroller = true
         scrollView.borderType = .noBorder
         scrollView.drawsBackground = true
         scrollView.backgroundColor = .black
 
-        let textView = TerminalNSTextView()
-        textView.coordinator = context.coordinator
-        textView.isEditable = true
+        let textView = NSTextView()
+        textView.isEditable = false
         textView.isSelectable = true
         textView.allowsUndo = false
         textView.backgroundColor = .black
@@ -71,61 +70,7 @@ struct TerminalTextView: NSViewRepresentable {
     }
 
     final class Coordinator: NSObject {
-        let terminal: TerminalService
-        weak var textView: TerminalNSTextView?
+        weak var textView: NSTextView?
         var lastRenderedText: String = ""
-
-        init(terminal: TerminalService) {
-            self.terminal = terminal
-        }
-
-        func handleUserInput(_ input: String) {
-            terminal.sendRaw(input)
-        }
-    }
-}
-
-final class TerminalNSTextView: NSTextView {
-    weak var coordinator: TerminalTextView.Coordinator?
-
-    override func keyDown(with event: NSEvent) {
-        guard let coordinator else {
-            super.keyDown(with: event)
-            return
-        }
-
-        if let chars = event.charactersIgnoringModifiers, !chars.isEmpty {
-            coordinator.handleUserInput(chars)
-        } else {
-            super.keyDown(with: event)
-        }
-    }
-
-    override func insertNewline(_ sender: Any?) {
-        coordinator?.handleUserInput("\n")
-    }
-
-    override func insertTab(_ sender: Any?) {
-        coordinator?.handleUserInput("\t")
-    }
-
-    override func deleteBackward(_ sender: Any?) {
-        coordinator?.handleUserInput("\u{7F}")
-    }
-
-    override func moveLeft(_ sender: Any?) {
-        coordinator?.handleUserInput("\u{1B}[D")
-    }
-
-    override func moveRight(_ sender: Any?) {
-        coordinator?.handleUserInput("\u{1B}[C")
-    }
-
-    override func moveUp(_ sender: Any?) {
-        coordinator?.handleUserInput("\u{1B}[A")
-    }
-
-    override func moveDown(_ sender: Any?) {
-        coordinator?.handleUserInput("\u{1B}[B")
     }
 }

@@ -6,6 +6,7 @@ struct ContentView: View {
     @AppStorage("saved_ssh_command") private var savedSSHCommand: String = ""
 
     @State private var aiInput: String = ""
+    @State private var terminalInput: String = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -46,9 +47,25 @@ struct ContentView: View {
 
                 Divider()
 
-                VStack {
+                VStack(spacing: 0) {
                     TerminalTextView(terminal: terminal)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    Divider()
+
+                    HStack {
+                        TextField("Enter command...", text: $terminalInput)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit {
+                                runTerminalCommand()
+                            }
+
+                        Button("Run") {
+                            runTerminalCommand()
+                        }
+                    }
+                    .padding()
+                    .background(Color(NSColor.windowBackgroundColor))
                 }
 
                 Divider()
@@ -73,6 +90,13 @@ struct ContentView: View {
         .onAppear {
             terminal.startShell()
         }
+    }
+
+    private func runTerminalCommand() {
+        let trimmed = terminalInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        terminal.send(trimmed)
+        terminalInput = ""
     }
 
     private func runAI() {
