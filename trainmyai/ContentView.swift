@@ -36,7 +36,6 @@ struct ContentView: View {
                             nohup bash -c 'while true; do nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits > /tmp/trainmyai/gpu_stats.txt; sleep 3; done' >/tmp/trainmyai/gpu_watcher.log 2>&1 &
                             """
                         )
-                        terminal.startRemoteStatsPolling()
                     }
                 }
 

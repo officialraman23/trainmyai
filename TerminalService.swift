@@ -13,42 +13,19 @@ final class TerminalService: ObservableObject {
     @Published var gpuTemp: String = "--°C"
     @Published var gpuPower: String = "--W"
 
-    let controller = TerminalController()
-
-    init() {
-        controller.onConnectionChanged = { [weak self] connected in
-            guard let self else { return }
-            self.isConnected = connected
-            self.isRunning = connected
-            self.connectionStatus = connected ? "Connected" : "Disconnected"
-            if !connected {
-                self.resetStats()
-            }
-        }
-
-        controller.onStatsParsed = { [weak self] gpu, memory, temp, power in
-            guard let self else { return }
-            self.gpuUsage = gpu
-            self.gpuMemory = memory
-            self.gpuTemp = temp
-            self.gpuPower = power
-        }
-    }
-
     func connectSSH() {
         connectionStatus = "Connecting..."
-        controller.connectSSH(command: savedSSHCommand)
+    }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            self.controller.startStatsWatcher()
-        }
+    func markConnected() {
+        isConnected = true
+        isRunning = true
+        connectionStatus = "Connected"
     }
 
     func disconnectSSH() {
-        controller.disconnectSSH()
-    }
-
-    private func resetStats() {
+        isConnected = false
+        connectionStatus = "Disconnected"
         gpuUsage = "--"
         gpuMemory = "-- / --"
         gpuTemp = "--°C"
