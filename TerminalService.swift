@@ -30,6 +30,10 @@ final class TerminalService: ObservableObject {
         isConnected = false
         connectionStatus = "Disconnected"
         stopStatsPolling()
+        resetStats()
+    }
+
+    private func resetStats() {
         gpuUsage = "--"
         gpuMemory = "-- / --"
         gpuTemp = "--°C"
@@ -41,12 +45,12 @@ final class TerminalService: ObservableObject {
 
         statsTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
             guard let self else { return }
-            Task { @MainActor in
+            Task {
                 await self.fetchGPUStats()
             }
         }
 
-        Task { @MainActor in
+        Task {
             await fetchGPUStats()
         }
     }
@@ -59,7 +63,7 @@ final class TerminalService: ObservableObject {
     private func fetchGPUStats() async {
         guard isConnected else { return }
 
-        let remoteCommand = #"nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits"#
+        let remoteCommand = "nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw --format=csv,noheader,nounits"
         let fullCommand = buildHiddenSSHCommand(remoteCommand: remoteCommand)
 
         guard !fullCommand.isEmpty else { return }
@@ -68,20 +72,26 @@ final class TerminalService: ObservableObject {
             let output = try await runShellCommand(fullCommand)
             parseGPUStats(output)
         } catch {
-            // Keep UI stable, don't spam errors in visible terminal
+            // silent for now
         }
     }
 
     private func buildHiddenSSHCommand(remoteCommand: String) -> String {
         let trimmed = savedSSHCommand.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "" }
+        guard !trimmed.isEmpty, trimmed.hasPrefix("ssh ") else { return "" }
 
-        if trimmed.hasPrefix("ssh ") {
-            let withoutSSH = String(trimmed.dropFirst(4))
-            return "ssh -o BatchMode=yes \(withoutSSH) \"\(remoteCommand)\""
-        }
+        var command = trimmed
 
-        return ""
+        command = command.replacingOccurrences(
+            of: "~/.ssh/id_ed25519",
+            with: "/Users/user/.ssh/id_ed25519"
+        )
+
+        let sshBody = String(command.dropFirst(4))
+
+        return """
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \(sshBody) "\(remoteCommand)"
+        """
     }
 
     private func runShellCommand(_ command: String) async throws -> String {
@@ -109,16 +119,16 @@ final class TerminalService: ObservableObject {
     }
 
     private func parseGPUStats(_ output: String) {
-        let firstLine = output
+        let lines = output
             .split(separator: "\n")
             .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty && $0.contains(",") }
+            .filter { !$0.isEmpty }
 
-        guard let line = firstLine else { return }
+        guard let csvLine = lines.first(where: { $0.contains(",") }) else { return }
 
-        let parts = line.split(separator: ",").map {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
+        let parts = csvLine
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
 
         guard parts.count >= 5 else { return }
 
