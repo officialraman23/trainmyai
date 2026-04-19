@@ -37,11 +37,17 @@ struct SwiftTermView: NSViewRepresentable {
         ) { note in
             if let command = note.object as? String,
                !command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+
+                // If this looks like a metrics test string, only parse it
+                if command.lowercased().contains("loss"),
+                   command.lowercased().contains("grad"),
+                   command.lowercased().contains("epoch") {
+                    terminal.consumeTrainingOutput(command)
+                    return
+                }
+
                 view.send(txt: command)
                 view.send(txt: "\n")
-
-                // temporary parser hook for testing metrics
-                terminal.consumeTrainingOutput(command)
             }
         }
 
